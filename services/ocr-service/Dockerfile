@@ -59,8 +59,8 @@ USER appuser
 
 EXPOSE 8004
 
-HEALTHCHECK --interval=60s --timeout=10s --start-period=10s --retries=3 \
-    CMD curl -f http://34.141.19.200:8004/health || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8004/health || exit 1
 
 CMD ["python", "-m", "uvicorn", "app.main:app", \
      "--host", "0.0.0.0", \
