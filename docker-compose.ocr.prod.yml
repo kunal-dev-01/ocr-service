@@ -1,15 +1,14 @@
 # ============================================================================
 # FILE: docker-compose.ocr.prod.yml (Root Directory)
-# PURPOSE: OCR Service - Separate VM Production
+# PURPOSE: OCR Service - e2-small VM (2 CPU, 2GB RAM)
 # ============================================================================
 
 version: '3.9'
 
 services:
   # ==========================================================================
-  # OCR REDIS (Separate - Local only)
+  # OCR REDIS (Local only)
   # ==========================================================================
-  
   redis-ocr:
     image: redis:7-alpine
     container_name: zemrev_redis_ocr_prod
@@ -18,7 +17,7 @@ services:
       - "6379"
     command: |
       redis-server
-      --maxmemory 512mb
+      --maxmemory 256mb
       --maxmemory-policy allkeys-lru
       --save ""
       --appendonly no
@@ -29,25 +28,30 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
 
   # ==========================================================================
   # OCR SERVICE
   # ==========================================================================
-  
   ocr-service:
     build:
       context: .
       dockerfile: services/ocr-service/Dockerfile
     container_name: zemrev_ocr_prod
     restart: unless-stopped
-    expose:
-      - "8004"
+    ports:
+      - "8004:8004"
     env_file:
       - ./services/ocr-service/.env.production
     environment:
       - REDIS_URL=redis://redis-ocr:6379
       - QUEUE_NAME=zemrev_ocr_jobs
       - QUEUE_MAX_WORKERS=2
+      - WORKERS=2
       - LOG_LEVEL=info
     depends_on:
       redis-ocr:
@@ -55,19 +59,19 @@ services:
     networks:
       - zemrev_ocr_prod
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
-      interval: 30s
+      test: ["CMD", "curl", "-f", "http://34.141.19.200:8004/health"]
+      interval: 60s
       timeout: 10s
       retries: 3
-      start_period: 15s
+      start_period: 10s
     deploy:
       resources:
         limits:
-          cpus: '4'
-          memory: 4G
+          cpus: '1.5'
+          memory: 1.2G
         reservations:
-          cpus: '2'
-          memory: 2G
+          cpus: '1'
+          memory: 800M
 
 networks:
   zemrev_ocr_prod:
