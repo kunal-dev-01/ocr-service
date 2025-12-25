@@ -4,13 +4,11 @@ import logging
 from typing import Dict, Any
 from pathlib import Path
 
-# Import shared queue package
 from zemrev_queue import queue_manager
-
-# Import service-specific processors
 from app.services.ocr_processor import ocr_pdf_to_searchable
 
 from app.core.config import settings
+from app.utils.file_io import safe_remove
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +27,10 @@ class QueueWorker:
         job_type = job_data["type"]
         start_time = time.time()
         
+        # Track files for cleanup
+        pdf_path = None
+        output_path = None
+        
         try:
             logger.info(f"Worker {self.worker_id} processing {job_id} ({job_type})")
             
@@ -43,19 +45,37 @@ class QueueWorker:
             # ================================================================
             if job_type == "pdf-to-searchable":
                 language = options.get("language", "eng")
-                dpi = options.get("dpi", 300)
+                dpi = options.get("dpi", 200) 
+                
+                # Clamp DPI to safe range (in case frontend sends bad values)
+                dpi = max(150, min(300, dpi)) 
+                
                 output_path = pdf_path.parent / f"{pdf_path.stem}_searchable.pdf"
                 
-                pages_processed = ocr_pdf_to_searchable(pdf_path, output_path, language, dpi)
+                ocr_result = ocr_pdf_to_searchable(
+                    pdf_path, 
+                    output_path, 
+                    language, 
+                    dpi
+                )
                 
                 result = {
                     "filename": output_path.name,
                     "output_path": str(output_path),
-                    "pages_processed": pages_processed,
+                    "pages_processed": ocr_result["pages_processed"],
+                    "ocr_skipped": ocr_result["ocr_skipped"],
+                    "skip_reason": ocr_result.get("reason"),
                     "language": language,
                     "dpi": dpi,
-                    "processing_time": time.time() - start_time
+                    "processing_time": round(time.time() - start_time, 2)
                 }
+                
+                logger.info(
+                    f"Worker {self.worker_id} | {job_id} | "
+                    f"Pages: {ocr_result['pages_processed']} | "
+                    f"Skipped: {ocr_result['ocr_skipped']} | "
+                    f"Time: {result['processing_time']}s"
+                )
             
             else:
                 raise ValueError(f"Unknown job type: {job_type}")
@@ -68,11 +88,18 @@ class QueueWorker:
                 return True
             else:
                 raise Exception("No result generated")
-            
+        
         except Exception as e:
             logger.error(f"Worker {self.worker_id} failed {job_id}: {e}")
             await queue_manager.fail_job(job_id, str(e))
             return False
+        
+        finally:
+            # ✅ ADDED: Cleanup files after processing (success or failure)
+            if pdf_path and pdf_path.exists():
+                safe_remove(pdf_path)
+                logger.debug(f"Cleaned up input: {pdf_path.name}")
+            
     
     async def start(self):
         """Start worker loop"""
@@ -87,17 +114,19 @@ class QueueWorker:
                 if job_data:
                     await self.process_job(job_data)
                 else:
+                    # No jobs in queue, wait before checking again
                     await asyncio.sleep(1)
                     
             except Exception as e:
                 logger.error(f"Worker {self.worker_id} error: {e}")
-                await asyncio.sleep(5)
+                await asyncio.sleep(5)  # Back off on errors
         
         logger.info(f"Worker {self.worker_id} stopped")
     
     async def stop(self):
         """Stop worker"""
         self.is_running = False
+
 
 class WorkerManager:
     """Manage multiple workers"""
@@ -134,5 +163,6 @@ class WorkerManager:
         self.tasks.clear()
         
         logger.info("✅ Workers stopped")
+
 
 worker_manager = WorkerManager()
