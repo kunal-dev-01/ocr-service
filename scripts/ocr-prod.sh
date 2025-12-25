@@ -119,6 +119,18 @@ ocr_prod_queue() {
     print_info "  Active workers: $WORKERS"
 }
 
+# Clean
+ocr_prod_clean() {
+    read -p "Remove all containers and volumes? (y/n) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        print_info "Cleaning..."
+        docker-compose -f $COMPOSE_FILE down -v
+        docker system prune -f
+        print_success "Cleaned!"
+    fi
+}
+
 # Service info
 ocr_prod_info() {
     print_info "OCR Service Information:"
@@ -131,6 +143,7 @@ ocr_prod_info() {
 case "${1:-start}" in
     start) ocr_prod_start ;;
     stop) ocr_prod_stop ;;
+    clean) ocr_prod_clean ;;
     restart) ocr_prod_restart ;;
     logs) ocr_prod_logs ;;
     rebuild) ocr_prod_rebuild ;;
