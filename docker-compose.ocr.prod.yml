@@ -3,8 +3,6 @@
 # PURPOSE: OCR Service - e2-small VM (2 CPU, 2GB RAM)
 # ============================================================================
 
-version: '3.9'
-
 services:
   # ==========================================================================
   # OCR REDIS (Local only)
@@ -69,9 +67,6 @@ services:
         limits:
           cpus: '1.5'
           memory: 1.2G
-        reservations:
-          cpus: '1'
-          memory: 800M
 
 networks:
   zemrev_ocr_prod:
