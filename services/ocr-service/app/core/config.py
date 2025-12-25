@@ -7,20 +7,20 @@ class Settings(BaseSettings):
     # SERVICE CONFIG ONLY (Queue config handled by zemrev-queue package)
     # ========================================================================
     
-    WORKERS: int = 1
+    WORKERS: int = 2
     LOG_LEVEL: str = "info"
     HOST: str = "0.0.0.0"
     PORT: int = 8004
-    ALLOWED_ORIGINS: str = "https://www.zemrev.com,https://zemrev.com,https://api.zemrev.com,http://api.zemrev.com/"
+    ALLOWED_ORIGINS: str = "https://34.107.43.152:80,http://34.107.43.152:80/,https://34.107.43.152:443,http://34.107.43.152:443/,https://api.zemrev.com,http://api.zemrev.com/,http://34.107.43.152,https://34.107.43.152"
     UPLOAD_DIR: str = "/tmp/zemrev_ocr_uploads"
     
     # ========================================================================
     # TOOL-SPECIFIC LIMITS
     # ========================================================================
     
-    MAX_FILE_SIZE: int = 10485760           # 25MB
+    MAX_FILE_SIZE: int = 5242880         
     MAX_PAGES: int = 40
-    TOOL_TIMEOUT: int = 600                 # 10 minutes
+    TOOL_TIMEOUT: int = 900              
     
     # ========================================================================
     # QUEUE-RELATED (Service uses this, .env provides value)

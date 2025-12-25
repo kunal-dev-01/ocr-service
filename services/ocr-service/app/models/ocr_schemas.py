@@ -7,17 +7,17 @@ from typing import Optional
 # ============================================================================
 
 class OcrPdfRequest(BaseModel):
+
     language: str = Field(
         default="eng",
         description="OCR language code (eng, fra, deu, spa, etc.)"
     )
     dpi: int = Field(
-        default=300,
+        default=200,
         ge=150,
-        le=600,
-        description="DPI for OCR processing (150-600)"
+        le=300, 
+        description="DPI for OCR processing (150-300)"
     )
-
 
 
 # ============================================================================
@@ -25,6 +25,11 @@ class OcrPdfRequest(BaseModel):
 # ============================================================================
 
 class OcrResponse(BaseModel):
+    """OCR processing result"""
     message: str
     pages_processed: int
     language: str
+    ocr_skipped: bool = Field(
+        default=False,
+        description="True if PDF already had text (OCR was skipped)"
+    )
